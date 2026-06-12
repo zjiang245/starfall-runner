@@ -379,8 +379,9 @@
       boss: null,
       bossProjectiles: [],
       shake: 0,
-      player: { x: 0, y: 0, radius: 18, vx: 0 },
+      player: { x: 0, y: 0, radius: 36, vx: 0, vy: 0 },
       pointerX: null,
+      pointerY: null,
       bullets: [],
       missiles: [],
       stars: [],
@@ -400,9 +401,10 @@
       canvas.style.width = state.width + "px";
       canvas.style.height = state.height + "px";
       ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
-      state.player.y = state.height - Math.max(96, state.height * 0.16);
+      state.player.y = state.player.y || state.height - Math.max(110, state.height * 0.18);
       state.player.x = state.player.x || state.width / 2;
-      state.player.x = clamp(state.player.x, 30, state.width - 30);
+      state.player.x = clamp(state.player.x, 46, state.width - 46);
+      state.player.y = clamp(state.player.y, 86, state.height - 58);
       makeBackdrop();
     }
 
@@ -453,7 +455,9 @@
       state.gems = [];
       state.particles = [];
       state.player.x = state.width / 2;
+      state.player.y = state.height - Math.max(110, state.height * 0.18);
       state.player.vx = 0;
+      state.player.vy = 0;
       overlay.classList.add("hidden");
       updateHud();
     }
@@ -752,7 +756,7 @@
         const spread = i - center;
         state.bullets.push({
           x: state.player.x + spread * spacing,
-          y: state.player.y - 25,
+          y: state.player.y - 50,
           r: 4,
           radius: 4,
           power: powerBoost,
@@ -762,7 +766,7 @@
           life: 1.1
         });
       }
-      burst(state.player.x, state.player.y - 28, "#ffd166", 2 + lanes);
+      burst(state.player.x, state.player.y - 56, "#ffd166", 2 + lanes);
     }
 
     function fireGreenBullet() {
@@ -775,7 +779,7 @@
         const spread = i - center;
         state.bullets.push({
           x: state.player.x + spread * spacing,
-          y: state.player.y - 31,
+          y: state.player.y - 62,
           r: 5,
           radius: 5,
           power: 2 * powerBoost,
@@ -785,7 +789,7 @@
           life: 1.18
         });
       }
-      burst(state.player.x, state.player.y - 34, "#7CFF6B", 4 + lanes);
+      burst(state.player.x, state.player.y - 68, "#7CFF6B", 4 + lanes);
     }
 
     function fireMissiles() {
@@ -797,7 +801,7 @@
         const spread = i - center;
         state.missiles.push({
           x: state.player.x + spread * spacing,
-          y: state.player.y - 26,
+          y: state.player.y - 52,
           r: 8,
           radius: 8,
           vx: spread * 34,
@@ -806,7 +810,7 @@
           trail: []
         });
       }
-      burst(state.player.x, state.player.y - 36, "#7dd3fc", 4 + count);
+      burst(state.player.x, state.player.y - 72, "#7dd3fc", 4 + count);
     }
 
     function nearestRock(missile) {
@@ -877,16 +881,26 @@
 
       const left = state.keys.has("ArrowLeft") || state.keys.has("a") || state.keys.has("A");
       const right = state.keys.has("ArrowRight") || state.keys.has("d") || state.keys.has("D");
-      if (state.pointerX !== null) {
-        const targetX = clamp(state.pointerX, 26, state.width - 26);
+      const up = state.keys.has("ArrowUp") || state.keys.has("w") || state.keys.has("W");
+      const down = state.keys.has("ArrowDown") || state.keys.has("s") || state.keys.has("S");
+      if (state.pointerX !== null && state.pointerY !== null) {
+        const targetX = clamp(state.pointerX, 46, state.width - 46);
+        const targetY = clamp(state.pointerY, 86, state.height - 58);
         const previousX = state.player.x;
-        state.player.x += (targetX - state.player.x) * Math.min(1, dt * 14);
+        const previousY = state.player.y;
+        state.player.x += (targetX - state.player.x) * Math.min(1, dt * 7);
+        state.player.y += (targetY - state.player.y) * Math.min(1, dt * 7);
         state.player.vx = (state.player.x - previousX) / Math.max(dt, 0.001);
+        state.player.vy = (state.player.y - previousY) / Math.max(dt, 0.001);
       } else {
-        const input = (right ? 1 : 0) - (left ? 1 : 0);
-        state.player.vx += input * 2300 * dt;
+        const inputX = (right ? 1 : 0) - (left ? 1 : 0);
+        const inputY = (down ? 1 : 0) - (up ? 1 : 0);
+        state.player.vx += inputX * 1150 * dt;
+        state.player.vy += inputY * 1150 * dt;
         state.player.vx *= Math.pow(0.0008, dt);
-        state.player.x = clamp(state.player.x + state.player.vx * dt, 26, state.width - 26);
+        state.player.vy *= Math.pow(0.0008, dt);
+        state.player.x = clamp(state.player.x + state.player.vx * dt, 46, state.width - 46);
+        state.player.y = clamp(state.player.y + state.player.vy * dt, 86, state.height - 58);
       }
 
       if (state.fireCooldown <= 0) {
@@ -1129,9 +1143,10 @@
     function drawShip(x, y) {
       ctx.save();
       ctx.translate(x, y);
+      ctx.scale(2, 2);
       ctx.rotate(state.player.vx * 0.0006);
       ctx.shadowColor = "rgba(112, 225, 200, 0.7)";
-      ctx.shadowBlur = 18;
+      ctx.shadowBlur = 9;
       ctx.fillStyle = "#eaf7ff";
       ctx.beginPath();
       ctx.moveTo(0, -24);
@@ -1616,12 +1631,14 @@
     window.addEventListener("resize", resize);
     window.addEventListener("pointermove", (event) => {
       state.pointerX = event.clientX;
+      state.pointerY = event.clientY;
     });
     window.addEventListener("pointerleave", () => {
       state.pointerX = null;
+      state.pointerY = null;
     });
     window.addEventListener("keydown", (event) => {
-      if (["ArrowLeft", "ArrowRight", " ", "Spacebar"].includes(event.key)) event.preventDefault();
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " ", "Spacebar"].includes(event.key)) event.preventDefault();
       if (event.key === " " || event.key === "Spacebar" || event.key === "p" || event.key === "P") {
         if (!state.running || state.gameOver) reset();
         else pauseToggle();
